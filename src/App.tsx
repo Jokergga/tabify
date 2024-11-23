@@ -1,5 +1,4 @@
-import { TabGroup } from './components';
-import AntdTabs from './components/AntdTabs';
+import { TabGroup } from "./components";
 
 function App() {
 
@@ -8,8 +7,7 @@ function App() {
     { label: 'Tab 2', content: <div>Content 2</div> },
   ];
 
-  // return <TabGroup tabs={tabs} />;
-  return <AntdTabs />
+  return <TabGroup tabs={tabs} />;
 }
 
 export default App
