@@ -11,6 +11,9 @@ import { findDataByColumns, findElementWithParents, getMaxDepth, isColumnCompone
 import { ArrayField } from "@formily/core";
 import { ListTableProps } from "@visactor/react-vtable/es/tables/list-table";
 import ReactDom from 'react-dom/client'
+import { IVTable } from "@visactor/react-vtable/es/tables/base-table";
+import { uid } from '@formily/shared';
+
 const { register, ListTable, ListColumn, Group, Text, Image } = ReactVTable;
 
 const inputEditor = new InputEditor();
@@ -68,47 +71,6 @@ const initialColumns = [
   },
 ];
 
-// const initialColumns1 = [
-//   {
-//     field: 'name',
-//     title: 'name',
-//     width: 100
-//   },
-//   {
-//     title: 'Name',
-//     columns: [
-//       {
-//         field: 'age',
-//         // title: 'age',
-//         title: 'age',
-//         width: 100
-//       },
-//       {
-//         title: 'name-level-2',
-//         width: 150,
-//         columns: [
-//           {
-//             title: 'name-level-3',
-//             width: 150,
-//             columns: [
-//               {
-//                 field: 'gender',
-//                 title: 'gender',
-//                 width: 100
-//               },
-//               {
-//                 title: 'hobby',
-//                 field: 'hobby',
-//                 width: 150
-//               }
-//             ]
-//           }
-//         ]
-//       }
-//     ]
-//   }
-// ];
-
 const useStyles = createStyles(({ css }) => {
   return {
     'table-container': css`
@@ -128,18 +90,17 @@ const useArrayField = (props) => {
   const field = useField<ArrayField>();
   return (props.field || field) as ArrayField;
 };
+const TempCom = (props) => {
+  return <UserProfileComponent {...props} />
+}
 
 const UserProfileComponent = props => {
-  console.log('---props1---', props)
   const { table, row, col, rect, dataValue } = props;
   if (!table || row === undefined || col === undefined) {
     return null;
   }
   const { height, width } = rect || table.getCellRect(col, row);
-  const record = table.getRecordByCell(col, row);
-
-  const [hover, setHover] = React.useState(false);
-
+  // const record = table.getRecordByCell(col, row);
   return (
     <Group
       attribute={{
@@ -151,8 +112,9 @@ const UserProfileComponent = props => {
         alignItems: 'center',
         alignContent: 'center'
       }}
+      onClick={() => { console.log('gggggggggggggggg') }}
     >
-      <Group
+      {/* <Group
         attribute={{
           width: 190,
           height: 25,
@@ -168,9 +130,10 @@ const UserProfileComponent = props => {
           boundsPadding: [0, 0, 0, 10],
           react: {
             pointerEvents: true,
-            container: table.bodyDomContainer, // table.headerDomContainer
+            container: table.headerDomContainer, // table.headerDomContainer
+            // container: table.bodyDomContainer, // table.headerDomContainer
             anchorType: 'bottom-right',
-            element: <CardInfo record={record} hover={hover} row={row} />
+            element: <CardInfo  record={record} hover={hover} row={row} />
           }
         }}
         onMouseEnter={event => {
@@ -181,35 +144,25 @@ const UserProfileComponent = props => {
           setHover(false);
           event.currentTarget.stage.renderNextFrame();
         }}
-      >
-        <Image
-          attribute={{
-            width: 20,
-            height: 20,
-            image: record.bloggerAvatar,
-            cornerRadius: 10,
-            boundsPadding: [0, 0, 0, 10],
-            cursor: 'pointer'
-          }}
-        />
-        <Text
-          attribute={{
-            text: dataValue,
-            fontSize: 14,
-            fontFamily: 'sans-serif',
-            fill: 'rgb(51, 101, 238)',
-            boundsPadding: [0, 0, 0, 10],
-            cursor: 'pointer'
-          }}
-        />
-      </Group>
+      > */}
+      <Text
+        attribute={{
+          text: dataValue,
+          fontSize: 14,
+          fontFamily: 'sans-serif',
+          fill: 'rgb(51, 101, 238)',
+          // boundsPadding: [0, 0, 0, 10],
+          // cursor: 'pointer'
+        }}
+      />
+      {/* </Group> */}
     </Group>
   );
 };
 
 const CardInfo = props => {
-  const { bloggerName, bloggerAvatar, introduction, city } = props.record;
-  return <h1>123</h1>
+  // const { bloggerName, bloggerAvatar, introduction, city } = props.record;
+  return <h1 onClick={() => { console.log('card click'); }}>123</h1>
   // return props.hover ? (
   //   <Card
   //     className="card-with-icon-hover"
@@ -265,7 +218,20 @@ const EditableTable = withDynamicSchemaProps((props) => {
     }
     return buf;
   }, []);
-  const [columns, setColumns] = React.useState(initialColumns)
+  const colsRef = React.useRef<any>();
+  const columns = React.useMemo(() => {
+   console.log('---columnsSchema---', columnsSchema);
+   const cols = columnsSchema.map(item => item['x-component-props']['options']);
+   console.log('--cols--', cols);
+   colsRef.current = cols;
+   return cols
+  }, [columnsSchema])
+  // const [columns, setColumns] = React.useState(initialColumns)
+
+  const setColumns = (columns) => {
+    console.log('---setColumns---', columns);
+    console.log(schema.properties, '123');
+  }
 
   const onPageChange: PaginationProps['onChange'] = (pageNumber) => {
     console.log('Page: ', pageNumber);
@@ -297,11 +263,12 @@ const EditableTable = withDynamicSchemaProps((props) => {
     dragHeaderMode: 'column',
     menu: {
       contextMenuItems(field, row, col, table,) {
-        const maxDepth = getMaxDepth(columns);
-        if (row < maxDepth) {
+        // const maxDepth = getMaxDepth(columns);
+        if (row < 4) {
           return [
             { text: '与前一列合并', menuKey: 'beforeMerge', },
             { text: '与后一列合并', menuKey: 'afterMerge', }
+            // { text: '', menuKey: 'afterMerge', }
           ]
         }
         return [
@@ -312,7 +279,88 @@ const EditableTable = withDynamicSchemaProps((props) => {
         ]
       },
     },
-    // customRender() {
+
+    // customRender(args) {
+    //   if (args.row === 0 || args.col === 0) return null;
+    //   const { width, height } = args.rect;
+    //   const { dataValue, table, row, col } = args;
+    //   const elements: any[] = [];
+    //   let top = 30;
+    //   const left = 15;
+    //   let maxWidth = 0;
+    //   elements.push({
+    //     type: 'rect',
+    //     fill: '#a23be1',
+    //     x: left + 20,
+    //     y: top - 20,
+    //     width: 300,
+    //     height: 28
+    //   });
+    //   elements.push({
+    //     type: 'text',
+    //     fill: 'white',
+    //     fontSize: 20,
+    //     fontWeight: 500,
+    //     textBaseline: 'middle',
+    //     text:
+    //       col === 1
+    //         ? row === 1
+    //           ? 'important & urgency'
+    //           : 'not important but urgency'
+    //         : row === 1
+    //         ? 'important but not urgency'
+    //         : 'not important & not urgency',
+    //     x: left + 50,
+    //     y: top - 5
+    //   });
+    //   // dataValue.forEach((item, i) => {
+    //   //   top += 35;
+    //   //   if (col == 1) {
+    //   //     if (row === 1)
+    //   //       elements.push({
+    //   //         type: 'icon',
+    //   //         svg: '<svg t="1687586728544" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1480" width="200" height="200"><path d="M576.4 203.3c46.7 90.9 118.6 145.5 215.7 163.9 97.1 18.4 111.5 64.9 43.3 139.5s-95.6 162.9-82.3 265.2c13.2 102.3-24.6 131-113.4 86.2s-177.7-44.8-266.6 0-126.6 16-113.4-86.2c13.2-102.3-14.2-190.7-82.4-265.2-68.2-74.6-53.7-121.1 43.3-139.5 97.1-18.4 169-73 215.7-163.9 46.6-90.9 93.4-90.9 140.1 0z" fill="#733FF1" p-id="1481"></path></svg>',
+    //   //         x: left - 6,
+    //   //         y: top - 6,
+    //   //         width: 12,
+    //   //         height: 12
+    //   //       });
+    //   //     else
+    //   //       elements.push({
+    //   //         type: 'circle',
+    //   //         stroke: '#000',
+    //   //         fill: 'yellow',
+    //   //         x: left,
+    //   //         y: top,
+    //   //         radius: 3
+    //   //       });
+    //   //   } else {
+    //   //     elements.push({
+    //   //       type: 'rect',
+    //   //       stroke: '#000',
+    //   //       fill: 'blue',
+    //   //       x: left - 3,
+    //   //       y: top - 3,
+    //   //       width: 6,
+    //   //       height: 6
+    //   //     });
+    //   //   }
+    //   //   elements.push({
+    //   //     type: 'text',
+    //   //     fill: 'blue',
+    //   //     font: '14px sans-serif',
+    //   //     baseline: 'top',
+    //   //     text: item,
+    //   //     x: left + 10,
+    //   //     y: top + 5
+    //   //   });
+    //   //   maxWidth = Math.max(maxWidth, table.measureText(item, { fontSize: '15' }).width);
+    //   // });
+    //   return {
+    //     elements,
+    //     expectedHeight: top + 20,
+    //     expectedWidth: maxWidth + 20
+    //   };
     // }
   };
 
@@ -322,88 +370,155 @@ const EditableTable = withDynamicSchemaProps((props) => {
       instance.on('dropdown_menu_click', (args) => {
         console.log('dropdown_menu_click', args);
         const { menuKey, col, field, row, cellLocation } = args;
+        
         console.log('col：', col, 'row：', row, 'field：', field);
-        console.log('---columns---',JSON.parse(JSON.stringify(columns)));
+        // console.log('---columns---', JSON.parse(JSON.stringify(columns)));
         // const data = findDataByColumns(args, columns);
-        const data = findElementWithParents(columns, field)
+        const cols = [...colsRef.current]
+        const data = findElementWithParents(cols, field)
+        console.log('---cols--', cols);
+        console.log('---data--', data);
+        
+        const id = uid();
         
         switch (menuKey) {
           case 'beforeMerge':
             // first level
             if (data.length === 1) {
               const element = data[0];
-              columns.splice(element.index - 1, 2, { title: 'test-merge', columns: [columns[element.index - 1], columns[element.index]],  })
+              // cols.splice(element.index - 1, 2, { title: 'test-merge', columns: [columns[element.index - 1], columns[element.index]], })
+              cols.splice(element.index - 1, 2, ...[{...columns[element.index - 1], parent: id}, {...columns[element.index], parent: id}, { title: 'test-merge', id }]);
             }
             for (let index = data.length - 2; index >= 0; index--) {
               const element = data[index].data;
               const next = data[index + 1].index;
               if (next > 0) {
-                element.columns.splice(next - 1, 2, { title: 'test-merge', columns: [element.columns[next - 1], element.columns[next]],  });
+                // element.columns.splice(next - 1, 2, { title: 'test-merge', columns: [element.columns[next - 1], element.columns[next]], });
+                element.columns.splice(next - 1, 2,  ...[{...element.columns[next - 1], parent: id}, {...element.columns[next], parent: id}, { title: 'test-merge', id }] );
                 break;
               }
               // bubbling to first level
               if (index === 0) {
                 console.log(data[index].index);
                 const eIndex = data[index].index
-                columns.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex - 1], columns[eIndex]],  })
+                // cols.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex - 1], columns[eIndex]], })
+                cols.splice(eIndex - 1, 2, ...[{...columns[eIndex - 1], parent: id}, {...columns[eIndex], parent: id}, { title: 'test-merge', id }])
               }
             }
             break;
           case 'afterMerge':
-             // first level
-             if (data.length === 1) {
+            // first level
+            if (data.length === 1) {
               const element = data[0];
-              columns.splice(element.index, 2, { title: 'test-merge', columns: [columns[element.index], columns[element.index + 1]],  })
+              // cols.splice(element.index, 2, { title: 'test-merge', columns: [columns[element.index], columns[element.index + 1]], })
+              cols.splice(element.index, 2, ...[{...columns[element.index], parent: id}, {...columns[element.index + 1], parent: id}, { title: 'test-merge', id }])
             }
             for (let index = data.length - 2; index >= 0; index--) {
               const element = data[index].data;
               const next = data[index + 1].index;
               if (next < element.columns.length) {
-                element.columns.splice(next, 2, { title: 'test-merge', columns: [element.columns[next], element.columns[next + 1]],  });
+                // element.columns.splice(next, 2, { title: 'test-merge', columns: [element.columns[next], element.columns[next + 1]], });
+                element.columns.splice(next, 2,  ...[{...element.columns[next], parent: id}, {...element.columns[next + 1], parent: id}, { title: 'test-merge', id }]);
                 break;
               }
               // bubbling to first level
               if (index === 0) {
                 console.log(data[index].index);
                 const eIndex = data[index].index
-                columns.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex], columns[eIndex + 1]],  })
+                cols.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex], columns[eIndex + 1]], })
+                cols.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex], columns[eIndex + 1]], })
               }
             }
             break;
           default:
             break;
         }
-        console.log('---result---', columns);
-        
-        setColumns([...columns])
+        console.log('---result---', cols);
+
+
+        setColumns([...cols])
       })
       instance.on('change_header_position', (args) => {
         console.log('---args---', args);
+
+      })
+      instance.on('click_cell', (...args) => {
+        console.log('click_cell', args);
         
       })
       // console.log('---ListTable.EVENT_TYPE---', ListTable.EVENT_TYPE);
       // instance.on(ListTable.EVENT_TYPE)
     }
   }
+  console.log('--columnsSchema--', columnsSchema);
+  const onClick = () => {
+    tableInstance.current!.options.columns.push( {
+      field: 'name',
+      title: 'name',
+      editor: 'text-editor',
+      width: 'auto',
+       customRender(args) {
+        return {
+          elements: [
+            {
+              type: 'text',
+              fill: 'white',
+              fontSize: 20,
+              fontWeight: 500,
+              textBaseline: 'middle',
+              text: args.dataValue,
+              schema: {
+                name: 'test'
+              }
+              // text:
+              //   col === 1
+              //     ? row === 1
+              //       ? 'important & urgency'
+              //       : 'not important but urgency'
+              //     : row === 1
+              //     ? 'important but not urgency'
+              //     : 'not important & not urgency',
+              // x: left + 50,
+              // y: top - 5
+            }
+          ]
+      }
+    }})
+    // tableInstance.current.render()
+    tableInstance.current.updateOption(tableInstance.current!.options)
+  }
 
-  
   return <>
     <ListTable {...options} style={{ zIndex: 11 }} onReady={onReady} ReactDOM={ReactDom}>
-      {/* {
-        columnsSchema.map((s, index) => {
-          const col = s['x-component-props']['options']
-          return <ListColumn key={col.field} {...col} ></ListColumn>
-        })
-      } */}
       {
-        columns.map((col) => {
-          return <ListColumn key={col.field} {...col} ><UserProfileComponent role={'custom-layout'} /></ListColumn>
+        columns.map((s, index) => {
+          // console.log('----s-----', s);
+          // const options = s['x-component-props']['options'];
+          // const options = {
+          //   field: 'name',
+          //   title: 'name',
+          //   editor: 'text-editor',
+          //   width: 'auto',
+          // };
+          return <>
+          <ListColumn key={s.field} {...s} />
+          </>
         })
       }
+      {/* {
+        columns.map((col) => {
+          return <ListColumn key={col.field}   {...col} >
+            <TempCom role={'header-custom-layout'} />
+          </ListColumn>
+        })
+      } */}
+      {/* <UserProfileComponent role={'header-custom-layout'} />
+            <UserProfileComponent role={'custom-layout'} /> */}
     </ListTable>
-    <div className={styles['page-container']}>
+    <div className={styles['page-container']} >
       {/* <Pagination showQuickJumper defaultCurrent={1} total={500} onChange={onPageChange} /> */}
       {tableInitializerExists && tableInitializerRender()}
+      {/* <h1 onClick={onClick}>123</h1> */}
     </div>
   </>
 }, {
