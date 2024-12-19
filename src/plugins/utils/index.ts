@@ -77,3 +77,30 @@ export function findElementWithParents(columns, targetField) {
   // 从根级开始遍历，初始路径为空数组
   return traverse(columns, targetField, []);
 }
+
+export function arrayToTree(arr) {
+  const lookup = {};
+  const tree = [];
+
+  // 创建一个查找表，用于快速找到每个节点
+  arr.forEach(item => {
+    lookup[item.id] = item;
+  });
+
+  // 构建树结构
+  arr.forEach(item => {
+    if (item.parent) {
+      // 如果有父节点，将其加入父节点的 columns
+      const parent = lookup[item.parent];
+      if (parent) {
+        if (!parent.columns) parent.columns = []
+        parent.columns.push(lookup[item.id]);
+      }
+    } else {
+      // 如果没有父节点，则为根节点
+      tree.push(lookup[item.id]);
+    }
+  });
+
+  return tree;
+}

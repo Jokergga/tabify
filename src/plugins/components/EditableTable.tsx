@@ -1,13 +1,13 @@
 import React from "react";
-import { withDynamicSchemaProps, useSchemaInitializerRender, useACLFieldWhitelist } from '@zebras/noco-core/client';
+import { withDynamicSchemaProps, useSchemaInitializerRender, useACLFieldWhitelist, useDesignable } from '@zebras/noco-core/client';
 import * as ReactVTable from '@visactor/react-vtable';
 import { DateInputEditor, InputEditor, ListEditor, TextAreaEditor } from '@visactor/vtable-editors';
 import { Pagination, type PaginationProps } from 'antd';
 import { createStyles } from 'antd-style';
-import { RecursionField, useField, useFieldSchema } from "@formily/react";
+import { RecursionField, Schema, useField, useFieldSchema } from "@formily/react";
 import { EditableTableColumn } from "./EditableTable.Column";
 import { EditableTableColumnDecorator } from "./EditableTable.Column.Decorator";
-import { findDataByColumns, findElementWithParents, getMaxDepth, isColumnComponent } from "../utils";
+import { arrayToTree, findDataByColumns, findElementWithParents, getMaxDepth, isColumnComponent } from "../utils";
 import { ArrayField } from "@formily/core";
 import { ListTableProps } from "@visactor/react-vtable/es/tables/list-table";
 import ReactDom from 'react-dom/client'
@@ -210,8 +210,11 @@ const EditableTable = withDynamicSchemaProps((props) => {
   const { styles } = useStyles();
   const schema = useFieldSchema();
   const field = useArrayField(props);
+  const { dn } = useDesignable();
   const { exists: tableInitializerExists, render: tableInitializerRender } = useSchemaInitializerRender(schema['x-initializer'], schema['x-initializer-props']);
   const { schemaInWhitelist } = useACLFieldWhitelist();
+  console.log('---schema---', schema.toJSON());
+
   const columnsSchema = schema.reduceProperties((buf, s) => {
     if (isColumnComponent(s) && schemaInWhitelist(Object.values(s.properties || {}).pop())) {
       return buf.concat([s]);
@@ -220,17 +223,41 @@ const EditableTable = withDynamicSchemaProps((props) => {
   }, []);
   const colsRef = React.useRef<any>();
   const columns = React.useMemo(() => {
-   console.log('---columnsSchema---', columnsSchema);
-   const cols = columnsSchema.map(item => item['x-component-props']['options']);
-   console.log('--cols--', cols);
-   colsRef.current = cols;
-   return cols
+    const cols = columnsSchema.map(item => ({ id: uid(), ...item['x-component-props']['options'], name: item['name'],  }));
+    const res =  arrayToTree(cols)
+    colsRef.current = res;
+    return res
   }, [columnsSchema])
   // const [columns, setColumns] = React.useState(initialColumns)
 
   const setColumns = (columns) => {
     console.log('---setColumns---', columns);
+    columns.forEach(col => {
+      if (col.name) {
+        // dn.emit('patch',{
+        //   schema: {
+        //     'x-uid': col.uid,
+        //     'x-component-props': {options:  col},
+        //   }
+        // })
+        console.log('schema.properties![col.uid]', schema.properties);
+        console.log('col.uid', schema.properties![col.name]);
+
+        schema.properties![col.name]['x-component-props'] = { options: col }
+      } else {
+        const id = uid()
+        schema.properties![id] = new Schema({
+          name: id,
+          'x-uid': uid(),
+          ['x-component-props']: { options: col },
+          type: 'void',
+          'x-component': 'EditableTable.Column',
+        })
+      }
+
+    })
     console.log(schema.properties, '123');
+    dn.refresh()
   }
 
   const onPageChange: PaginationProps['onChange'] = (pageNumber) => {
@@ -370,7 +397,7 @@ const EditableTable = withDynamicSchemaProps((props) => {
       instance.on('dropdown_menu_click', (args) => {
         console.log('dropdown_menu_click', args);
         const { menuKey, col, field, row, cellLocation } = args;
-        
+
         console.log('col：', col, 'row：', row, 'field：', field);
         // console.log('---columns---', JSON.parse(JSON.stringify(columns)));
         // const data = findDataByColumns(args, columns);
@@ -378,23 +405,23 @@ const EditableTable = withDynamicSchemaProps((props) => {
         const data = findElementWithParents(cols, field)
         console.log('---cols--', cols);
         console.log('---data--', data);
-        
+
         const id = uid();
-        
+
         switch (menuKey) {
           case 'beforeMerge':
             // first level
             if (data.length === 1) {
               const element = data[0];
               // cols.splice(element.index - 1, 2, { title: 'test-merge', columns: [columns[element.index - 1], columns[element.index]], })
-              cols.splice(element.index - 1, 2, ...[{...columns[element.index - 1], parent: id}, {...columns[element.index], parent: id}, { title: 'test-merge', id }]);
+              cols.splice(element.index - 1, 2, ...[{ ...columns[element.index - 1], parent: id }, { ...columns[element.index], parent: id }, { title: 'test-merge', id }]);
             }
             for (let index = data.length - 2; index >= 0; index--) {
               const element = data[index].data;
               const next = data[index + 1].index;
               if (next > 0) {
                 // element.columns.splice(next - 1, 2, { title: 'test-merge', columns: [element.columns[next - 1], element.columns[next]], });
-                element.columns.splice(next - 1, 2,  ...[{...element.columns[next - 1], parent: id}, {...element.columns[next], parent: id}, { title: 'test-merge', id }] );
+                element.columns.splice(next - 1, 2, ...[{ ...element.columns[next - 1], parent: id }, { ...element.columns[next], parent: id }, { title: 'test-merge', id }]);
                 break;
               }
               // bubbling to first level
@@ -402,7 +429,7 @@ const EditableTable = withDynamicSchemaProps((props) => {
                 console.log(data[index].index);
                 const eIndex = data[index].index
                 // cols.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex - 1], columns[eIndex]], })
-                cols.splice(eIndex - 1, 2, ...[{...columns[eIndex - 1], parent: id}, {...columns[eIndex], parent: id}, { title: 'test-merge', id }])
+                cols.splice(eIndex - 1, 2, ...[{ ...columns[eIndex - 1], parent: id }, { ...columns[eIndex], parent: id }, { title: 'test-merge', id }])
               }
             }
             break;
@@ -411,22 +438,22 @@ const EditableTable = withDynamicSchemaProps((props) => {
             if (data.length === 1) {
               const element = data[0];
               // cols.splice(element.index, 2, { title: 'test-merge', columns: [columns[element.index], columns[element.index + 1]], })
-              cols.splice(element.index, 2, ...[{...columns[element.index], parent: id}, {...columns[element.index + 1], parent: id}, { title: 'test-merge', id }])
+              cols.splice(element.index, 2, ...[{ ...columns[element.index], parent: id }, { ...columns[element.index + 1], parent: id }, { title: 'test-merge', id }])
             }
             for (let index = data.length - 2; index >= 0; index--) {
               const element = data[index].data;
               const next = data[index + 1].index;
               if (next < element.columns.length) {
                 // element.columns.splice(next, 2, { title: 'test-merge', columns: [element.columns[next], element.columns[next + 1]], });
-                element.columns.splice(next, 2,  ...[{...element.columns[next], parent: id}, {...element.columns[next + 1], parent: id}, { title: 'test-merge', id }]);
+                element.columns.splice(next, 2, ...[{ ...element.columns[next], parent: id }, { ...element.columns[next + 1], parent: id }, { title: 'test-merge', id }]);
                 break;
               }
               // bubbling to first level
               if (index === 0) {
                 console.log(data[index].index);
                 const eIndex = data[index].index
-                cols.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex], columns[eIndex + 1]], })
-                cols.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex], columns[eIndex + 1]], })
+                // cols.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex], columns[eIndex + 1]], })
+                cols.splice(eIndex - 1, 2, ...[{ ...columns[eIndex], parent: id }, { ...columns[next + 1], parent: id }, { title: 'test-merge', id }])
               }
             }
             break;
@@ -444,20 +471,19 @@ const EditableTable = withDynamicSchemaProps((props) => {
       })
       instance.on('click_cell', (...args) => {
         console.log('click_cell', args);
-        
+
       })
       // console.log('---ListTable.EVENT_TYPE---', ListTable.EVENT_TYPE);
       // instance.on(ListTable.EVENT_TYPE)
     }
   }
-  console.log('--columnsSchema--', columnsSchema);
   const onClick = () => {
-    tableInstance.current!.options.columns.push( {
+    tableInstance.current!.options.columns.push({
       field: 'name',
       title: 'name',
       editor: 'text-editor',
       width: 'auto',
-       customRender(args) {
+      customRender(args) {
         return {
           elements: [
             {
@@ -482,8 +508,9 @@ const EditableTable = withDynamicSchemaProps((props) => {
               // y: top - 5
             }
           ]
+        }
       }
-    }})
+    })
     // tableInstance.current.render()
     tableInstance.current.updateOption(tableInstance.current!.options)
   }
@@ -501,7 +528,7 @@ const EditableTable = withDynamicSchemaProps((props) => {
           //   width: 'auto',
           // };
           return <>
-          <ListColumn key={s.field} {...s} />
+            <ListColumn key={s.field} {...s} />
           </>
         })
       }
