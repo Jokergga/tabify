@@ -32,12 +32,9 @@ const useTableColumnInitializerFields = () => {
   const isSubTable = fieldSchema['x-component'] === 'AssociationField.SubTable';
   const form = useForm();
   const isReadPretty = isSubTable ? form.readPretty : true;
-  // console.log('--currentFields--', currentFields);
-
   return currentFields
     .filter((field) => field?.interface && field?.interface !== 'subTable' && !field?.treeChildren)
     .map((field) => {
-      // console.log('---field---', field);
       const interfaceConfig = getInterface(field.interface);
       const isFileCollection = field?.target && getCollection(field?.target)?.template === 'file';
       const isPreviewComponent = field?.uiSchema?.['x-component'] === 'Preview';
@@ -102,7 +99,6 @@ const commonOptions = {
   icon: 'PlusCircleOutlined',
   title: '{{t("Configure columns")}}',
   wrap: (s, { isInSubTable }) => {
-    console.log('---s--', s);
     // if (s['x-action-column']) {
     //   return s;
     // }

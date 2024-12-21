@@ -3,8 +3,6 @@ export const isColumnComponent = (schema: Schema) => {
   return schema['x-component']?.endsWith('.Column') > -1;
 };
 
-
-
 export const findDataByColumns = (opts, columns) => {
   const { row, col } = opts;
   // let index = col;
@@ -51,7 +49,6 @@ export const  getMaxDepth = (columns) => {
   // 从初始层级开始计算
   return findDepth(columns, 1);
 }
-
 
 export function findElementWithParents(columns, targetField) {
   // 内部递归函数，用于遍历列配置

@@ -1,12 +1,17 @@
 import { useField } from '@formily/react';
 import { ListColumn } from '@visactor/react-vtable';
 import React from 'react';
+import { useSchemaSettingsRender } from '@zebras/noco-core/client';
 
 export const EditableTableColumn = (props) => {
+  const { render } = useSchemaSettingsRender('fieldSettings:EditableTableColumn');
 
-  console.log('---EditableTableColumn props--', props.options);
-  
-  return <ListColumn key={props.field} {...props.options} />
+  console.log('---EditableTableColumn props--',props);
+
+  // return <ListColumn key={props.field} {...props.options} />
+  return <>
+    {render()}
+  </>
 };
 
 

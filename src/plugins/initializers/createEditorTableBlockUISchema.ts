@@ -13,7 +13,7 @@ export const createEditorTablebBlockUISchema = (options: {
   return {
     type: 'void',
     'x-decorator': 'TableBlockProvider',
-    'x-use-decorator-props': 'useTableBlockDecoratorProps',
+    'x-use-decorator-props': 'useEditableTableBlockDecoratorProps',
     'x-acl-action': `${association || collectionName}:list`,
     'x-decorator-props': {
       collection: collectionName,
@@ -28,13 +28,14 @@ export const createEditorTablebBlockUISchema = (options: {
       dragSort: false,
     },
     'x-toolbar': 'BlockSchemaToolbar',
-    'x-settings': 'blockSettings:table',
+    'x-settings': 'blockSettings:editableTable',
     'x-component': 'CardItem',
     properties: {
       [uid()]: {
         type: 'array',
         'x-component': 'EditableTable',
         'x-initializer': 'editableTable:configureColumns',
+
       },
     },
   };
