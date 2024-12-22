@@ -4,7 +4,7 @@ import * as ReactVTable from '@visactor/react-vtable';
 import { DateInputEditor, InputEditor, ListEditor, TextAreaEditor } from '@visactor/vtable-editors';
 import { Pagination, type PaginationProps } from 'antd';
 import { createStyles } from 'antd-style';
-import {  Schema, useField, useFieldSchema } from "@formily/react";
+import { Schema, useField, useFieldSchema } from "@formily/react";
 import { EditableTableColumn } from "./EditableTable.Column";
 import { EditableTableColumnDecorator } from "./EditableTable.Column.Decorator";
 import { arrayToTree, findDataByColumns, findElementWithParents, getMaxDepth, isColumnComponent } from "../utils";
@@ -69,7 +69,7 @@ const EditableTable = withDynamicSchemaProps((props) => {
   const columns = React.useMemo(() => {
     const cols = columnsSchema.map(item => ({ id: item['x-uid'], ...item['x-component-props']['options'], name: item['name'], }));
     console.log('col array', JSON.parse(JSON.stringify(cols)));
-    colsRef.current = [...cols];
+    colsRef.current = JSON.parse(JSON.stringify(cols));
     const res = arrayToTree(cols)
     console.log('col tree', res);
     return res
@@ -126,8 +126,10 @@ const EditableTable = withDynamicSchemaProps((props) => {
     dragHeaderMode: 'column',
     menu: {
       contextMenuItems(field, row, col, table,) {
-        // const maxDepth = getMaxDepth(columns);
-        if (row < 4) {
+        const maxDepth = getMaxDepth(columns);
+        console.log('---maxDepth---', maxDepth); 
+        
+        if (row === 0) {
           return [
             { text: '与前一列合并', menuKey: 'beforeMerge', },
             { text: '与后一列合并', menuKey: 'afterMerge', }
@@ -154,63 +156,72 @@ const EditableTable = withDynamicSchemaProps((props) => {
         // console.log('---columns---', JSON.parse(JSON.stringify(columns)));
         // const data = findDataByColumns(args, columns);
         const cols = [...colsRef.current]
-        const data = findElementWithParents(cols, field)
+        const data = findElementWithParents(columns, field)
+        console.log('---cols clone ---', JSON.parse(JSON.stringify(cols)));
         console.log('---cols--', cols);
         console.log('---data--', data);
         const id = uid();
         switch (menuKey) {
           case 'beforeMerge':
             // first level
-            if (data.length === 1) {
-              const element = data[0];
-              // cols.splice(element.index - 1, 2, { title: 'test-merge', columns: [columns[element.index - 1], columns[element.index]], })
-              cols.splice(element.index - 1, 2, ...[{ ...columns[element.index - 1], parent: id }, { ...columns[element.index], parent: id }, { title: 'test-merge', id }]);
-            }
-            for (let index = data.length - 2; index >= 0; index--) {
-              const element = data[index].data;
-              const next = data[index + 1].index;
-              if (next > 0) {
-                // element.columns.splice(next - 1, 2, { title: 'test-merge', columns: [element.columns[next - 1], element.columns[next]], });
-                element.columns.splice(next - 1, 2, ...[{ ...element.columns[next - 1], parent: id }, { ...element.columns[next], parent: id }, { title: 'test-merge', id }]);
-                break;
-              }
-              // bubbling to first level
-              if (index === 0) {
-                console.log(data[index].index);
-                const eIndex = data[index].index
-                // cols.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex - 1], columns[eIndex]], })
-                cols.splice(eIndex - 1, 2, ...[{ ...columns[eIndex - 1], parent: id }, { ...columns[eIndex], parent: id }, { title: 'test-merge', id }])
-              }
-            }
+            // if (data.length === 1) {
+            const element = data[0];
+            const updateColumns = [columns[element.index - 1], columns[element.index]];
+            updateColumns.forEach(item => {
+              cols.find(col => col.id === item.id).parent = id;
+            })
+            // cols.splice(element.index - 1, 2, { title: 'test-merge', columns: [columns[element.index - 1], columns[element.index]], })
+            // cols.splice(element.index - 1, 2, ...[{ ...cols[element.index - 1], parent: id }, { ...cols[element.index], parent: id }, { title: 'test-merge', id }]);
+            // }
+            // for (let index = data.length - 2; index >= 0; index--) {
+            //   const element = data[index].data;
+            //   const next = data[index + 1].index;
+            //   if (next > 0) {
+            //     // element.columns.splice(next - 1, 2, { title: 'test-merge', columns: [element.columns[next - 1], element.columns[next]], });
+            //     element.columns.splice(next - 1, 2, ...[{ ...element.columns[next - 1], parent: id }, { ...element.columns[next], parent: id }, { title: 'test-merge', id }]);
+            //     break;
+            //   }
+            //   // bubbling to first level
+            //   if (index === 0) {
+            //     console.log(data[index].index);
+            //     const eIndex = data[index].index
+            //     // cols.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex - 1], columns[eIndex]], })
+            //     cols.splice(eIndex - 1, 2, ...[{ ...columns[eIndex - 1], parent: id }, { ...columns[eIndex], parent: id }, { title: 'test-merge', id }])
+            //   }
+            // }
             break;
           case 'afterMerge':
             // first level
-            if (data.length === 1) {
-              const element = data[0];
-              // cols.splice(element.index, 2, { title: 'test-merge', columns: [columns[element.index], columns[element.index + 1]], })
-              cols.splice(element.index, 2, ...[{ ...columns[element.index], parent: id }, { ...columns[element.index + 1], parent: id }, { title: 'test-merge', id }])
-            }
-            for (let index = data.length - 2; index >= 0; index--) {
-              const element = data[index].data;
-              const next = data[index + 1].index;
-              if (next < element.columns.length) {
-                // element.columns.splice(next, 2, { title: 'test-merge', columns: [element.columns[next], element.columns[next + 1]], });
-                element.columns.splice(next, 2, ...[{ ...element.columns[next], parent: id }, { ...element.columns[next + 1], parent: id }, { title: 'test-merge', id }]);
-                break;
-              }
-              // bubbling to first level
-              if (index === 0) {
-                console.log(data[index].index);
-                const eIndex = data[index].index
-                // cols.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex], columns[eIndex + 1]], })
-                cols.splice(eIndex - 1, 2, ...[{ ...columns[eIndex], parent: id }, { ...columns[next + 1], parent: id }, { title: 'test-merge', id }])
-              }
-            }
+            // if (data.length === 1) {
+            const element1 = data[0];
+            const updateColumns1 = [columns[element1.index], columns[element1.index + 1]];
+            updateColumns1.forEach(item => {
+              cols.find(col => col.id === item.id).parent = id;
+            })
+            // cols.splice(element.index, 2, { title: 'test-merge', columns: [columns[element.index], columns[element.index + 1]], })
+            // cols.splice(element.index, 2, ...[{ ...columns[element.index], parent: id }, { ...columns[element.index + 1], parent: id }, { title: 'test-merge', id }])
+            // }
+            // for (let index = data.length - 2; index >= 0; index--) {
+            //   const element = data[index].data;
+            //   const next = data[index + 1].index;
+            //   if (next < element.columns.length) {
+            //     // element.columns.splice(next, 2, { title: 'test-merge', columns: [element.columns[next], element.columns[next + 1]], });
+            //     element.columns.splice(next, 2, ...[{ ...element.columns[next], parent: id }, { ...element.columns[next + 1], parent: id }, { title: 'test-merge', id }]);
+            //     break;
+            //   }
+            //   // bubbling to first level
+            //   if (index === 0) {
+            //     console.log(data[index].index);
+            //     const eIndex = data[index].index
+            //     // cols.splice(eIndex - 1, 2, { title: 'test-merge', columns: [columns[eIndex], columns[eIndex + 1]], })
+            //     cols.splice(eIndex - 1, 2, ...[{ ...columns[eIndex], parent: id }, { ...columns[next + 1], parent: id }, { title: 'test-merge', id }])
+            //   }
+            // }
             break;
           default:
             break;
         }
-        setColumns([...cols])
+        setColumns([...cols, { title: 'test-merge', id }])
       })
       instance.on('change_header_position', (args) => {
       })

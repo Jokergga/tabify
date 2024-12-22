@@ -6,9 +6,6 @@ import { useSchemaSettingsRender } from '@zebras/noco-core/client';
 export const EditableTableColumn = (props) => {
   const { render } = useSchemaSettingsRender('fieldSettings:EditableTableColumn');
 
-  console.log('---EditableTableColumn props--',props);
-
-  // return <ListColumn key={props.field} {...props.options} />
   return <>
     {render()}
   </>

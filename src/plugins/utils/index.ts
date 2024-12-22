@@ -14,8 +14,6 @@ export const findDataByColumns = (opts, columns) => {
   const results: any[] = [{data: column, index}]
   let res = column, i = index;
   for (let index = 0; index < row; index++) {
-    console.log('--resr--', res);
-    
     const { columns } = res;
     if (!columns) break;
     const indey =  (col - i > columns.length ? columns.length : col - i) - 1;
