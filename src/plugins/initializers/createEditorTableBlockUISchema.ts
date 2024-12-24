@@ -12,7 +12,8 @@ export const createEditorTablebBlockUISchema = (options: {
 
   return {
     type: 'void',
-    'x-decorator': 'TableBlockProvider',
+    // 'x-decorator': 'TableBlockProvider',
+    'x-decorator': 'EditableTableBlockProvider',
     'x-use-decorator-props': 'useEditableTableBlockDecoratorProps',
     'x-acl-action': `${association || collectionName}:list`,
     'x-decorator-props': {

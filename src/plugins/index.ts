@@ -1,10 +1,11 @@
-import {  Plugin} from '@zebras/noco-core/client';
+import { Plugin } from '@zebras/noco-core/client';
 import { EditableTablePlugin } from './context';
 import { createEditorTablebBlockUISchema } from './initializers/createEditorTableBlockUISchema';
 import { editableTableColumnInitializers } from './initializers/components/TableColumnInitializers';
 import { tableColumnSettings } from './settings/tableColumnSettings';
 import { tableBlockSettings } from './settings/tableBlockSettings';
 import { useEditableTableBlockDecoratorProps } from './scopes/useEditableTableBlockDecoratorProps';
+import './editor-components';
 
 class PluginTableEditor extends Plugin {
 

@@ -30,7 +30,7 @@ export const tableBlockSettings = new SchemaSettings({
       useComponentProps() {
         const field = useField();
         const fieldSchema = useFieldSchema();
-        const { service } = useTableBlockContext();
+        // const { service } = useTableBlockContext();
         const { t } = useTranslation();
         const { dn } = useDesignable();
 
@@ -49,7 +49,7 @@ export const tableBlockSettings = new SchemaSettings({
             params.pageSize = pageSize;
             field.decoratorProps.params = params;
             fieldSchema['x-decorator-props']['params'] = params;
-            service.run({ ...service.params?.[0], pageSize, page: 1 });
+            // service.run({ ...service.params?.[0], pageSize, page: 1 });
             dn.emit('patch', {
               schema: {
                 ['x-uid']: fieldSchema['x-uid'],

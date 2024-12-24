@@ -278,10 +278,6 @@ export const tableColumnSettings = new SchemaSettings({
         const { form } = useFormBlockContext();
         const isFormReadPretty = useIsFormReadPretty();
         const validateSchema = useValidateSchema();
-        console.log('---form---', form);
-        console.log('---isFormReadPretty---', isFormReadPretty);
-        console.log('---validateSchema---', validateSchema);
-        
         // return form && !isFormReadPretty && validateSchema;
         return !isFormReadPretty && validateSchema;
       },

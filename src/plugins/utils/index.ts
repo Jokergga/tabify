@@ -1,3 +1,6 @@
+import { Schema } from "@formily/react";
+import { VariableOption, VariablesContextType } from "../types/linkage";
+import { collectFieldStateOfLinkageRules, getFieldNameByOperator } from "./linkage";
 
 export const isColumnComponent = (schema: Schema) => {
   return schema['x-component']?.endsWith('.Column') > -1;
@@ -98,4 +101,67 @@ export function arrayToTree(arr) {
   });
 
   return tree;
+}
+
+
+export function getSubscriber(
+  action: any,
+  field: any,
+  rule: any,
+  variables: VariablesContextType,
+  localVariables: VariableOption[],
+): (value: string, oldValue: string) => void {
+  return () => {
+    // 当条件改变触发 reaction 时，会同步收集字段状态，并保存到 field.stateOfLinkageRules 中
+    console.log('---field.stateOfLinkageRules1---', field.stateOfLinkageRules);
+    
+    collectFieldStateOfLinkageRules({
+      operator: action.operator,
+      value: action.value,
+      field,
+      condition: rule.condition,
+      variables,
+      localVariables,
+    });
+    console.log('---field.stateOfLinkageRules2---', field.stateOfLinkageRules);
+
+    // 当条件改变时，有可能会触发多个 reaction，所以这里需要延迟一下，确保所有的 reaction 都执行完毕后，
+    // 再从 field.stateOfLinkageRules 中取值，因为此时 field.stateOfLinkageRules 中的值才是全的。
+    setTimeout(async () => {
+      const fieldName = getFieldNameByOperator(action.operator);
+      console.log('---fieldName---', fieldName);
+      
+      // 防止重复赋值
+      if (!field.stateOfLinkageRules?.[fieldName]) {
+        return;
+      }
+
+      let stateList = field.stateOfLinkageRules[fieldName];
+
+      stateList = await Promise.all(stateList);
+      console.log('---stateList---', stateList);
+      
+      stateList = stateList.filter((v) => v.condition);
+
+      const lastState = stateList[stateList.length - 1];
+      console.log('---lastState?.value---', lastState?.value);
+      
+      if (fieldName === 'value') {
+        // value 比较特殊，它只有在匹配条件时才需要赋值，当条件不匹配时，维持现在的值；
+        // stateList 中肯定会有一个初始值，所以当 stateList.length > 1 时，就说明有匹配条件的情况；
+        if (stateList.length > 1) {
+          field.value = lastState.value;
+        }
+      } else {
+        field[fieldName] = lastState?.value;
+        //字段隐藏时清空数据
+        if (fieldName === 'display' && lastState?.value === 'none') {
+          field.value = null;
+        }
+      }
+
+      // 在这里清空 field.stateOfLinkageRules，就可以保证：当条件再次改变时，如果该字段没有和任何条件匹配，则需要把对应的值恢复到初始值；
+      // field.stateOfLinkageRules[fieldName] = null;
+    });
+  };
 }
