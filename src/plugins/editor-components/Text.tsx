@@ -69,8 +69,6 @@ class TextEditor implements IEditor {
   }
 
   setValue(value: string) {
-    console.log('---value', value);
-    
     this.element.value = typeof value !== 'undefined' ? value : '';
   }
 
@@ -79,10 +77,6 @@ class TextEditor implements IEditor {
   }
 
   onStart({ value, referencePosition, container, endEdit }: EditContext<string>) {
-    console.log('onStart value: ', value);
-    console.log('---this.element--', this.element);
-    console.log('---this.element?.value--', this.element?.value);
-    
     this.container = container;
     this.successCallback = endEdit;
     if (!this.element) {
@@ -111,12 +105,10 @@ class TextEditor implements IEditor {
   }
 
   endEditing() {
-    console.log('endEditing value: ', this.getValue());
     // do nothing
   }
 
   onEnd() {
-    console.log('onEnd value: ', this.getValue());
     this.element.value = null;
     // do nothing
     if (this.container?.contains(this.element)) {
@@ -149,7 +141,3 @@ class TextEditor implements IEditor {
 }
 
 export default TextEditor;
-
-// const textEditor = new TextEditor();
-
-// register.editor('text-editor', textEditor);

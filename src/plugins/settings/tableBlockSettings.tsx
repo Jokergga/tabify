@@ -60,7 +60,56 @@ export const tableBlockSettings = new SchemaSettings({
         };
       },
     },
+    {
+      name: 'RecordsPerPage',
+      type: 'select',
+      useComponentProps() {
+        const field = useField();
+        const fieldSchema = useFieldSchema();
+        // const { service } = useTableBlockContext();
+        const { t } = useTranslation();
+        const { dn } = useDesignable();
 
+        return {
+          title: t('Records per page'),
+          value: field.decoratorProps?.params?.pageSize || 20,
+          options: [
+            { label: '10', value: 10 },
+            { label: '20', value: 20 },
+            { label: '50', value: 50 },
+            { label: '100', value: 100 },
+            { label: '200', value: 200 },
+          ],
+          onChange: (pageSize) => {
+            const params = field.decoratorProps.params || {};
+            params.pageSize = pageSize;
+            field.decoratorProps.params = params;
+            fieldSchema['x-decorator-props']['params'] = params;
+            // service.run({ ...service.params?.[0], pageSize, page: 1 });
+            dn.emit('patch', {
+              schema: {
+                ['x-uid']: fieldSchema['x-uid'],
+                'x-decorator-props': fieldSchema['x-decorator-props'],
+              },
+            });
+          },
+        };
+      },
+    },
+    {
+      name: 'rowSeriesNumber',
+      type: 'switch',
+      useComponentProps() {
+        return {
+          // title: '{{t("Row series number")}}',
+          title: '显示序列号',
+          checked: true,
+          onChange: (checked) => {
+            console.log(checked);
+          }
+        }
+      }
+    },
     {
       name: 'linkageRules',
       Component: SchemaSettingsLinkageRules,

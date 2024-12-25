@@ -38,6 +38,8 @@ const useTableColumnInitializerFields = () => {
       const interfaceConfig = getInterface(field.interface);
       const isFileCollection = field?.target && getCollection(field?.target)?.template === 'file';
       const isPreviewComponent = field?.uiSchema?.['x-component'] === 'Preview';
+      console.log('---field.uiSchema---', field.uiSchema);
+      
       const schema = {
         name: field.name,
         'x-collection-field': `${name}.${field.name}`,
@@ -57,7 +59,8 @@ const useTableColumnInitializerFields = () => {
           field: field.name,
           width: 'auto',
           // TODO: set editor
-          editor: 'text-editor',
+          editor: field.uiSchema['x-component'],
+          enums: field.uiSchema['enum'],
         },
         'x-read-pretty': isReadPretty || field.uiSchema?.['x-read-pretty'],
         // 'x-decorator': isSubTable

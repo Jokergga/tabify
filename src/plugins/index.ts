@@ -5,7 +5,6 @@ import { editableTableColumnInitializers } from './initializers/components/Table
 import { tableColumnSettings } from './settings/tableColumnSettings';
 import { tableBlockSettings } from './settings/tableBlockSettings';
 import { useEditableTableBlockDecoratorProps } from './scopes/useEditableTableBlockDecoratorProps';
-import './editor-components';
 
 class PluginTableEditor extends Plugin {
 
