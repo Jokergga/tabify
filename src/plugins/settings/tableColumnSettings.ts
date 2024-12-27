@@ -324,5 +324,59 @@ export const tableColumnSettings = new SchemaSettings({
     //     }
     //   }
     // }
+    {
+      name: 'filter',
+      type: 'switch',
+      useComponentProps() {
+        const field = useField<Field>();
+        const fieldSchema = useFieldSchema();
+        const { dn, refresh } = useDesignable();
+        const { t } = useTranslation();
+        return {
+          title: t('Filter'),
+          checked: fieldSchema['x-component-props']['filter'] as boolean,
+          onChange(filter) {
+            const schema = {
+              ['x-uid']: fieldSchema['x-uid'],
+            };
+            fieldSchema['x-component-props']['filter'] = filter;
+            schema['x-component-props'] = fieldSchema['x-component-props'];
+            dn.emit('patch', {
+              schema,
+            });
+            refresh();
+          },
+        };
+
+      },
+
+    },
+    {
+      name: 'sorter',
+      type: 'switch',
+      useComponentProps() {
+        const field = useField<Field>();
+        const fieldSchema = useFieldSchema();
+        const { dn, refresh } = useDesignable();
+        const { t } = useTranslation();
+        return {
+          title: t('Sort'),
+          checked: fieldSchema['x-component-props']['sorter'] as boolean,
+          onChange(sorter) {
+            const schema = {
+              ['x-uid']: fieldSchema['x-uid'],
+            };
+            fieldSchema['x-component-props']['sorter'] = sorter;
+            schema['x-component-props'] = fieldSchema['x-component-props'];
+            dn.emit('patch', {
+              schema,
+            });
+            refresh();
+          },
+        };
+
+      },
+
+    }
   ],
 })

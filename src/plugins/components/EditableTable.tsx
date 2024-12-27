@@ -21,6 +21,10 @@ import { useLinkageRules } from "../context/LinkageRulesContext";
 import { collectFieldStateOfLinkageRules, getFieldNameByOperator, getTempFieldState } from "../utils/linkage";
 import { conditionAnalyses, getTargetField } from "../utils/linkage_condition";
 import { DateEditor, SelectEditor } from "../editor-components";
+import AntdSelectEditor from "../editor-components/AntdSelect";
+import AntdDatePickerEditor from "../editor-components/AntdDatePicker";
+import AntdTextAreaEditor from "../editor-components/TextArea";
+import { FilterDropdown } from "./FilterDropdown";
 const { register, ListTable, ListColumn } = ReactVTable;
 
 // const inputEditor = new InputEditor();
@@ -31,6 +35,17 @@ const { register, ListTable, ListColumn } = ReactVTable;
 // register.editor('textArea-editor', textAreaEditor);
 // register.editor('date-editor', dateInputEditor);
 // register.editor('list-editor', listEditor);
+
+register.icon('filter', {
+  name: 'filter',
+  type: 'svg',
+  width: 20,
+  height: 20,
+  marginRight: 6,
+  positionType: 'right',
+  // interactive: true,
+  svg: '<svg t="1707378931406" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1587" width="10" height="10"><path d="M909.6 854.5L649.9 594.8C690.2 542.7 712 479 712 412c0-80.2-31.3-155.4-87.9-212.1-56.6-56.7-132-87.9-212.1-87.9s-155.5 31.3-212.1 87.9C143.2 256.5 112 331.8 112 412c0 80.1 31.3 155.5 87.9 212.1C256.5 680.8 331.8 712 412 712c67 0 130.6-21.8 182.7-62l259.7 259.6a8.2 8.2 0 0011.6 0l43.6-43.5a8.2 8.2 0 000-11.6zM570.4 570.4C528 612.7 471.8 636 412 636s-116-23.3-158.4-65.6C211.3 528 188 471.8 188 412s23.3-116.1 65.6-158.4C296 211.3 352.2 188 412 188s116.1 23.2 158.4 65.6S636 352.2 636 412s-23.3 116.1-65.6 158.4z" p-id="1588"></path></svg>'
+});
 
 const records = new Array(10).fill(1).map(item => ({ 'f_0pdrve0ap0': uid(), 'f_pyo4cdyqgj': uid(), "f_g9r5ogfqve": '2024-02-15', "f_co8bk2r1dr": 'item1' }));
 
@@ -68,7 +83,6 @@ const EditableTable = withDynamicSchemaProps((props) => {
   const variables = useVariables();
   // const localVariables = useLocalVariables({ currentForm: form });
   const localVariables = useLocalVariables();
-
   const { linkageRules } = useLinkageRules();
   const schemaOptions = React.useContext(SchemaOptionsContext);
   const columnsSchema = schema.reduceProperties((buf, s) => {
@@ -77,44 +91,52 @@ const EditableTable = withDynamicSchemaProps((props) => {
     }
     return buf;
   }, []);
+
   const colsRef = React.useRef<any>();
   const columns = React.useMemo(() => {
     const cols = columnsSchema.map(item => {
       const options = item['x-component-props']['options'];
-      console.log('---options---', options);
-      
+      const filter = item['x-component-props']['filter'];
+      const sorter = item['x-component-props']['sorter'];
       let editor;
       if (["DatePicker"].includes(options.editor)) {
-        editor = new DateEditor({});
-        // editor = new DateInputEditor({});
+        // editor = new DateEditor({});
+        editor = new AntdDatePickerEditor({});
       } else if (["Select"].includes(options.editor)) {
-        editor = new SelectEditor({enums: options.enums});
-      } else {
+        // editor = new SelectEditor({enums: options.enums});
+        editor = new AntdSelectEditor({ enums: options.enums });
+      } else if (["Input.TextArea"].includes(options.editor)) {
+        // editor = new TextAreaEditor({});
+        editor = new AntdTextAreaEditor({});
+      }
+      else {
         editor = new TextEditor({ validator: item['x-validator'] });
       }
       return {
         id: item['x-uid'],
         ...item['x-component-props']['options'],
         name: item['name'],
-        // validator: item['x-validator'],
-        editor
+        editor,
+        fieldFormat(v) {
+          if (options.enums?.length) {
+            return options.enums.find(item => item.value === v[options.field]).label
+          }
+          return v[options.field];
+        },
+        sort: Boolean(sorter),
+        headerIcon: filter ? 'filter' : undefined,
       }
     });
     colsRef.current = JSON.parse(JSON.stringify(cols));
     const res = arrayToTree(cols);
-    console.log('get columns res:', res);
-
     return res
   }, [columnsSchema])
-  // const [columns, setColumns] = React.useState(initialColumns)
 
   const setColumns = (columns) => {
-    console.log('--set columns--', columns);
     const properties = schema.properties || {};
     const newProperties = {};
     columns.forEach(col => {
       if (col.name) {
-        // console.log('---properties---', properties);
         properties![col.name]['x-component-props'] = { options: col }
         newProperties[col.name] = properties![col.name]
       } else {
@@ -162,15 +184,12 @@ const EditableTable = withDynamicSchemaProps((props) => {
     dragHeaderMode: 'column',
     menu: {
       contextMenuItems(field, row, col, table, ...args) {
-        console.log('contextMenuItems', field, row, col, table, args);
         const maxDepth = getMaxDepth(columns);
-        console.log('---maxDepth---', maxDepth);
         if (row === 0) {
           return [
-            { text: '与前一列合并', menuKey: 'beforeMerge', },
-            { text: '与后一列合并', menuKey: 'afterMerge', }
-            // { text: '', menuKey: 'afterMerge', }
-          ]
+            col > 1 && { text: '与前一列合并', menuKey: 'beforeMerge', },
+            col > 0 && col < colsRef.current.length - 1 && { text: '与后一列合并', menuKey: 'afterMerge', }
+          ].filter(Boolean);
         }
 
         if (row < maxDepth) {
@@ -187,7 +206,9 @@ const EditableTable = withDynamicSchemaProps((props) => {
         ]
       },
     },
-
+    hover: {
+      highlightMode: 'cross'
+    },
   };
 
   const onChangeCellValue = (args) => {
@@ -369,6 +390,107 @@ const EditableTable = withDynamicSchemaProps((props) => {
   const onChangeHeaderPosition = (args) => {
   }
 
+  const onResizeColumn = (args) => {
+    // console.log('resize_column_end', args);
+  }
+
+  // let filterContainer = tableInstance.current.getElement();
+  let select;
+
+  let filterListSelectedValues = '';
+  let lastFilterField;
+
+  const onIconClick = (args) => {
+    const { col, row, name } = args;
+    if (name === 'filter') {
+      const field = tableInstance.current.getHeaderField(col, row);
+      if (select && lastFilterField === field) {
+        removeFilterElement();
+        lastFilterField = null;
+      } else if (!select || lastFilterField !== field) {
+        const rect = tableInstance.current.getCellRelativeRect(col, row);
+        // createFilterElement(filterListValues[field], filterListSelectedValues, field, rect);
+        createFilterElement(['item1', 'item2', 'item3'], filterListSelectedValues, field, rect);
+        lastFilterField = field;
+      }
+    }
+  }
+
+  function createFilterElement(values, curValue, field, positonRect) {
+    const tableInstanceElement = tableInstance.current.getElement();
+    // create select tag
+    // select = document.createElement('select');
+    // select.setAttribute('type', 'text');
+    // select.style.position = 'absolute';
+    // select.style.padding = '4px';
+    // select.style.width = '100%';
+    // select.style.boxSizing = 'border-box';
+    select = document.createElement('div');
+
+    const root = ReactDom.createRoot(select);
+
+    const style = {
+      position: 'absolute',
+      padding: '4px',
+      boxSizing: 'border-box',
+      top: positonRect.top + positonRect.height + 'px',
+      left: positonRect.left + 'px',
+      height: positonRect.height + 'px',
+      width: positonRect.width + 'px',
+    }
+
+    root.render(
+      <div>
+        <FilterDropdown style={style} />
+      </div>
+    );
+
+    tableInstanceElement.appendChild(select);
+
+    // // create option tags
+    // let opsStr = '';
+    // values.forEach(item => {
+    //   opsStr +=
+    //     item === curValue
+    //       ? `<option value="${item}" selected>${item}</option>`
+    //       : `<option value="${item}" >${item}</option>`;
+    // });
+    // select.innerHTML = opsStr;
+    // tableInstance.current.getElement().appendChild(select);
+    // select.style.top = positonRect.top + positonRect.height + 'px';
+    // select.style.left = positonRect.left + 'px';
+    // select.style.width = positonRect.width + 'px';
+    // select.style.height = positonRect.height + 'px';
+
+    select.addEventListener('change', () => {
+      filterListSelectedValues = select.value;
+      tableInstance.current.updateFilterRules([
+        {
+          filterKey: field,
+          filteredValues: select.value
+        }
+      ]);
+      removeFilterElement();
+      //更新列头icon
+      columns.forEach(col => {
+        if (col.field === field) {
+          col.headerIcon = 'filter';
+        }
+      });
+      tableInstance.current.updateColumns(columns);
+    });
+
+  }
+
+  function removeFilterElement() {
+    tableInstance.current.getElement().removeChild(select);
+    select.removeEventListener('change', () => {
+      // this.successCallback();
+    });
+    select = null;
+  }
+
+
   const onReady = async (instance: IVTable, isInitial: boolean) => {
     if (isInitial) {
       tableInstance.current = instance;
@@ -376,6 +498,8 @@ const EditableTable = withDynamicSchemaProps((props) => {
       instance.on('change_header_position', onChangeHeaderPosition);
       instance.on('click_cell', onClickCell);
       instance.on('change_cell_value', onChangeCellValue);
+      instance.on('resize_column_end', onResizeColumn);
+      instance.on('icon_click', onIconClick);
     }
   }
 
@@ -389,12 +513,15 @@ const EditableTable = withDynamicSchemaProps((props) => {
       {
         columns.map(s => {
           const props = {
-            editor: s.editor,
             key: s.field,
-            field: s.field,
-            title: s.title,
-            width: s.width,
-            columns: s.columns,
+            // editor: s.editor,
+            // field: s.field,
+            // title: s.title,
+            // width: s.width,
+            // columns: s.columns,
+            // fieldFormat: s.fieldFormat,
+            // sort: s.sort,
+            ...s,
           };
           return <ListColumn {...props} />
         })

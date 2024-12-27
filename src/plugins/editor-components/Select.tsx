@@ -27,17 +27,14 @@ export interface ListEditorConfig {
     select.style.boxSizing = 'border-box';
     select.style.backgroundColor = '#FFFFFF';
     this.element = select;
-
     // create option tags
     const { enums } = this.editorConfig;
-    console.log('---enums---', enums);
-    
     let opsStr = '';
     enums.forEach(item => {
       opsStr +=
-        item === value
-          ? `<option value="${value}" selected>${item.label}</option>`
-          : `<option value="${value}" >${item.label}</option>`;
+        item.value === value
+          ? `<option value="${item.value}" selected>${item.label}</option>`
+          : `<option value="${item.value}" >${item.label}</option>`;
     });
     select.innerHTML = opsStr;
 
@@ -46,8 +43,8 @@ export interface ListEditorConfig {
   }
 
   _bindSelectChangeEvent() {
-    this.element.addEventListener('change', () => {
-      this.successCallback();
+    this.element.addEventListener('change', (v) => {
+      // this.successCallback();
     });
   }
 
