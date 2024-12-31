@@ -120,5 +120,10 @@ export const tableBlockSettings = new SchemaSettings({
         };
       },
     },
+
+    {
+      name: 'delete',
+      type: 'remove',
+    }
   ],
 })

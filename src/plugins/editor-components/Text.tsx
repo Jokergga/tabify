@@ -1,19 +1,8 @@
-import { register } from '@visactor/react-vtable';
-import type { EditContext, IEditor, RectProps, } from '@visactor/vtable-editors';
+import type { EditContext, IEditor, RectProps } from '@visactor/vtable-editors';
 import { validate } from '@formily/validator'
+import { CellAddress, ValidateEnum } from './type';
 
 
-type CellAddress = {
-  col: number;
-  row: number;
-};
-
-enum ValidateEnum {
-  validateExit = 'validate-exit',
-  invalidateExit = 'invalidate-exit',
-  validateNotExit = 'validate-not-exit',
-  invalidateNotExit = 'invalidate-not-exit'
-}
 
 export interface InputEditorConfig {
   readonly?: boolean;
@@ -27,7 +16,7 @@ class TextEditor implements IEditor {
   element?: HTMLInputElement;
   errorElement?: HTMLDivElement;
 
-  constructor(editorConfig?: InputEditorConfig) {
+  constructor(editorConfig: InputEditorConfig) {
     this.editorConfig = editorConfig;
   }
 

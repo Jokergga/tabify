@@ -2,26 +2,30 @@ import type { EditContext, IEditor, RectProps } from '@visactor/vtable-editors';
 import ReactDom from 'react-dom/client';
 import React from 'react';
 import { Select } from 'antd';
+import { css } from '@emotion/css';
 
 export interface ListEditorConfig {
   enums: Array<{ value: string; label: string, color: string }>;
+  mode: "multiple"
 }
+
 
 
 class AntdSelectEditor implements IEditor {
   editorType: string = 'Input';
   input?: HTMLInputElement;
-  editorConfig?: ListEditorConfig;
+  editorConfig: ListEditorConfig;
   container?: HTMLElement;
   element?: HTMLSelectElement;
   successCallback?: () => void;
 
   constructor(editorConfig: ListEditorConfig) {
-    console.log('listEditor constructor');
+    console.log('listEditor constructor', editorConfig);
     this.editorConfig = editorConfig;
   }
 
   createElement(value: string) {
+    const { enums, mode } = this.editorConfig!;
     const div = document.createElement('div');
     div.style.position = 'absolute';
     div.style.width = '100%';
@@ -29,17 +33,25 @@ class AntdSelectEditor implements IEditor {
     div.style.boxSizing = 'border-box';
     div.style.backgroundColor = '#232324';
     this.container.appendChild(div);
-    const { enums } = this.editorConfig;
     this.root = ReactDom.createRoot(div);
+    const defaultValue = mode === 'multiple' ? value?.split?.(',').filter(Boolean) : value;
     this.root.render(
       <Select
         getPopupContainer={() => div}
-        onChange={value => { this.currentValue = value; }}
+        onChange={value => {
+          this.currentValue = Array.isArray(value) ? value.join(',') : value;
+        }}
         defaultOpen
         popupClassName={'antd-select-vtable'}
-        defaultValue={value}
+        defaultValue={defaultValue}
         style={{ width: '100%', height: '100%' }}
         options={enums.map(({ value, label, color }) => ({ value, label: <span style={{ color }}>{label}</span> }))}
+        mode={mode}
+        className={css`
+          .zd-select-selector {
+            overflow: auto;
+          }
+        `}
       />
     );
     this.element = div;

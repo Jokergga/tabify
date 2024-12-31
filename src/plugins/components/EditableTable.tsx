@@ -1,13 +1,12 @@
 import React from "react";
 import { useVariables, useLocalVariables, withDynamicSchemaProps, SchemaComponentOptions, SchemaComponent, useSchemaInitializerRender, useACLFieldWhitelist, useDesignable, useApp } from '@zebras/noco-core/client';
 import * as ReactVTable from '@visactor/react-vtable';
-import { DateInputEditor, InputEditor, ListEditor, TextAreaEditor } from '@visactor/vtable-editors';
 import { Pagination, type PaginationProps } from 'antd';
 import { createStyles } from 'antd-style';
 import { Schema, SchemaOptionsContext, useField, useFieldSchema } from "@formily/react";
 import { EditableTableColumn } from "./EditableTable.Column";
 import { EditableTableColumnDecorator } from "./EditableTable.Column.Decorator";
-import { arrayToTree, findDataByColumns, findElementWithParents, getMaxDepth, isColumnComponent } from "../utils";
+import { arrayToTree, findElementWithParents, getMaxDepth, isColumnComponent } from "../utils";
 import { ArrayField } from "@formily/core";
 import { ListTableProps } from "@visactor/react-vtable/es/tables/list-table";
 import ReactDom from 'react-dom/client'
@@ -19,22 +18,15 @@ import { FormLayout, FormDialog } from "@formily/antd-v5";
 import TextEditor from "../editor-components/Text";
 import { useLinkageRules } from "../context/LinkageRulesContext";
 import { collectFieldStateOfLinkageRules, getFieldNameByOperator, getTempFieldState } from "../utils/linkage";
-import { conditionAnalyses, getTargetField } from "../utils/linkage_condition";
-import { DateEditor, SelectEditor } from "../editor-components";
+import { getTargetField } from "../utils/linkage_condition";
 import AntdSelectEditor from "../editor-components/AntdSelect";
 import AntdDatePickerEditor from "../editor-components/AntdDatePicker";
 import AntdTextAreaEditor from "../editor-components/TextArea";
-import { FilterDropdown } from "./FilterDropdown";
-const { register, ListTable, ListColumn } = ReactVTable;
+import FilterMenu from "./FilterMenu";
+import { omit } from "lodash";
+import NumberEditor from "../editor-components/Number";
 
-// const inputEditor = new InputEditor();
-// const textAreaEditor = new TextAreaEditor();
-// const dateInputEditor = new DateInputEditor();
-// const listEditor = new ListEditor({ values: ['女', '男'] });
-// register.editor('text-editor', inputEditor);
-// register.editor('textArea-editor', textAreaEditor);
-// register.editor('date-editor', dateInputEditor);
-// register.editor('list-editor', listEditor);
+const { register, ListTable, ListColumn } = ReactVTable;
 
 register.icon('filter', {
   name: 'filter',
@@ -47,7 +39,7 @@ register.icon('filter', {
   svg: '<svg t="1707378931406" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1587" width="10" height="10"><path d="M909.6 854.5L649.9 594.8C690.2 542.7 712 479 712 412c0-80.2-31.3-155.4-87.9-212.1-56.6-56.7-132-87.9-212.1-87.9s-155.5 31.3-212.1 87.9C143.2 256.5 112 331.8 112 412c0 80.1 31.3 155.5 87.9 212.1C256.5 680.8 331.8 712 412 712c67 0 130.6-21.8 182.7-62l259.7 259.6a8.2 8.2 0 0011.6 0l43.6-43.5a8.2 8.2 0 000-11.6zM570.4 570.4C528 612.7 471.8 636 412 636s-116-23.3-158.4-65.6C211.3 528 188 471.8 188 412s23.3-116.1 65.6-158.4C296 211.3 352.2 188 412 188s116.1 23.2 158.4 65.6S636 352.2 636 412s-23.3 116.1-65.6 158.4z" p-id="1588"></path></svg>'
 });
 
-const records = new Array(10).fill(1).map(item => ({ 'f_0pdrve0ap0': uid(), 'f_pyo4cdyqgj': uid(), "f_g9r5ogfqve": '2024-02-15', "f_co8bk2r1dr": 'item1' }));
+const records = new Array(10).fill(1).map(item => ({ 'f_0pdrve0ap0': uid(), 'f_pyo4cdyqgj': uid(), "f_g9r5ogfqve": '2024-02-15', "f_co8bk2r1dr": 'item1', f_5xzgdiszgo: '' }));
 
 
 const useStyles = createStyles(({ css }) => {
@@ -91,37 +83,55 @@ const EditableTable = withDynamicSchemaProps((props) => {
     }
     return buf;
   }, []);
-
   const colsRef = React.useRef<any>();
   const columns = React.useMemo(() => {
-    const cols = columnsSchema.map(item => {
-      const options = item['x-component-props']['options'];
-      const filter = item['x-component-props']['filter'];
-      const sorter = item['x-component-props']['sorter'];
+    const cols = columnsSchema.map(columnSchema => {
+      const item = columnSchema.properties[columnSchema.name];
+      // console.log('----item-----', item);
+      const {
+        filter,
+        sorter,
+        enums,
+        name,
+        title,
+        'x-component-props': props,
+        'x-component': component
+      } = item;
+
+      // const options = item['x-component-props']['options'];
+      // const filter = item['x-component-props']['filter'];
+      // const sorter = item['x-component-props']['sorter'];
       let editor;
-      if (["DatePicker"].includes(options.editor)) {
+      console.log('----component----', component);
+      if (["DatePicker"].includes(component)) {
         // editor = new DateEditor({});
         editor = new AntdDatePickerEditor({});
-      } else if (["Select"].includes(options.editor)) {
+      } else if (["Select"].includes(component)) {
         // editor = new SelectEditor({enums: options.enums});
-        editor = new AntdSelectEditor({ enums: options.enums });
-      } else if (["Input.TextArea"].includes(options.editor)) {
+        editor = new AntdSelectEditor({ enums, ...props });
+      } else if (["Input.TextArea"].includes(component)) {
         // editor = new TextAreaEditor({});
         editor = new AntdTextAreaEditor({});
-      }
-      else {
+      } else if (['InputNumber'].includes(component)) {
+        editor = new NumberEditor({});
+      } else {
         editor = new TextEditor({ validator: item['x-validator'] });
       }
       return {
+        // ...options,
         id: item['x-uid'],
-        ...item['x-component-props']['options'],
         name: item['name'],
+        field: item['name'],
         editor,
+        title,
         fieldFormat(v) {
-          if (options.enums?.length) {
-            return options.enums.find(item => item.value === v[options.field]).label
+          const value = v[name];
+          if (enums?.length && value) {
+            const values = props.mode === 'multiple' ? value.split(',') : [value];
+            return values.map(value => enums.find(item => item.value === value)?.label).join(',')
+            // return enums.find(item => item.value === value)?.label
           }
-          return v[options.field];
+          return value;
         },
         sort: Boolean(sorter),
         headerIcon: filter ? 'filter' : undefined,
@@ -137,19 +147,19 @@ const EditableTable = withDynamicSchemaProps((props) => {
     const newProperties = {};
     columns.forEach(col => {
       if (col.name) {
-        properties![col.name]['x-component-props'] = { options: col }
-        newProperties[col.name] = properties![col.name]
+        properties![col.name]['x-component-props'] = { options: omit(col, ['columns']) };
+        newProperties[col.name] = properties![col.name];
       } else {
-        const id = uid()
+        const id = uid();
         newProperties[id] = new Schema({
           name: id,
           'x-uid': col.id,
-          ['x-component-props']: { options: col },
+          ['x-component-props']: { options: omit(col, ['columns']) },
           type: 'void',
           'x-component': 'EditableTable.Column',
-        })
+        });
       }
-    })
+    });
     schema.properties = newProperties;
     dn.refresh();
   }
@@ -161,6 +171,7 @@ const EditableTable = withDynamicSchemaProps((props) => {
   const options: ListTableProps = {
     // columns,
     records,
+    // records,
     // 宽度
     autoFillWidth: true,
     // 序号
@@ -183,11 +194,18 @@ const EditableTable = withDynamicSchemaProps((props) => {
     // 换位置
     dragHeaderMode: 'column',
     menu: {
-      contextMenuItems(field, row, col, table, ...args) {
+      contextMenuItems(field, row, col, table) {
+        // 合并之后 row 和 col 不可靠
+        console.log(columns, '---columns---')
         const maxDepth = getMaxDepth(columns);
-        if (row === 0) {
+        // 是否为第一行 
+        const isFirst = columns.find(column => column.field === field);
+        // 占多列
+        if (row === 0 || isFirst) {
           return [
-            col > 1 && { text: '与前一列合并', menuKey: 'beforeMerge', },
+            // 占多列
+            (col > 1 && (isFirst)) && { text: '与前一列合并', menuKey: 'beforeMerge', },
+            // col > 1 && { text: '与前一列合并', menuKey: 'beforeMerge', },
             col > 0 && col < colsRef.current.length - 1 && { text: '与后一列合并', menuKey: 'afterMerge', }
           ].filter(Boolean);
         }
@@ -209,6 +227,13 @@ const EditableTable = withDynamicSchemaProps((props) => {
     hover: {
       highlightMode: 'cross'
     },
+    autoWrapText: true,
+    // tooltip: {
+    //   isShowOverflowTextTooltip: true
+    // },
+    emptyTip: {
+      text: 'no data records'
+    }
   };
 
   const onChangeCellValue = (args) => {
@@ -276,10 +301,8 @@ const EditableTable = withDynamicSchemaProps((props) => {
     const { menuKey, col, field, row, cellLocation } = args;
     const recordIndex = tableInstance.current.getRecordShowIndexByCell(col, row);
     const cols = [...colsRef.current];
-    // console.log('---columns---', columns);
     const columns = arrayToTree(cols);
     const data = findElementWithParents(columns, field);
-    console.log('---data---', data);
     const id = uid();
     switch (menuKey) {
       // ----------merge------------
@@ -290,8 +313,8 @@ const EditableTable = withDynamicSchemaProps((props) => {
           cols.find(col => col.id === item.id).parent = id;
         })
         const { title } = await FormDialog(
-          // "编辑分组名称",
-          t("configure component properties"),
+          "设置名称",
+          // t("configure component properties"),
           () => {
             return (
               <SchemaComponentOptions scope={schemaOptions!.scope} components={{ ...schemaOptions!.components }}>
@@ -316,7 +339,8 @@ const EditableTable = withDynamicSchemaProps((props) => {
           }
         ).open({
         });
-        setColumns([...cols, { title, id }]);
+        const updateColumnIndex = cols.findIndex(col => col.id === updateColumns[0].id);
+        setColumns([...cols.slice(0, updateColumnIndex), { title, id }, ...cols.slice(updateColumnIndex)]);
         break;
       case 'afterMerge':
         const element1 = data[0];
@@ -345,11 +369,12 @@ const EditableTable = withDynamicSchemaProps((props) => {
             </FormLayout>
           </SchemaComponentOptions>
         ).open({});
-        setColumns([...cols, { title: title1, id }]);
+        // setColumns([...cols, { title: title1, id }]);
+        const updateColumnIndex1 = cols.findIndex(col => col.id === updateColumns1[0].id);
+        setColumns([...cols.slice(0, updateColumnIndex1), { title: title1, id }, ...cols.slice(updateColumnIndex1)]);
         break;
       // ----------cancel merge------------
       case 'cancelMerge':
-        // const lastElement = data[data.length - 1];
         const parent = data[data.length - 2].data;
         const index = colsRef.current.findIndex(col => col.id === parent.id);
         colsRef.current.filter(col => col.parent === parent.id).forEach(child => {
@@ -359,18 +384,18 @@ const EditableTable = withDynamicSchemaProps((props) => {
         break;
       // ----------data operate------------
       case 'insertDown':
-        tableInstance.current.addRecord({}, recordIndex + 1);
-        tableInstance.current.startEditCell(1, row + 1);
+        tableInstance.current!.addRecord({}, recordIndex + 1);
+        tableInstance.current!.startEditCell(1, row + 1);
         break;
       case 'insertUp':
-        tableInstance.current.addRecord({}, recordIndex - 1);
-        tableInstance.current.startEditCell(1, row - 1);
+        tableInstance.current!.addRecord({}, recordIndex - 1);
+        tableInstance.current!.startEditCell(1, row - 1);
         break;
       case 'update':
-        tableInstance.current.startEditCell(col, row);
+        tableInstance.current!.startEditCell(col, row);
         break;
       case 'remove':
-        tableInstance.current.deleteRecords([recordIndex]);
+        tableInstance.current!.deleteRecords([recordIndex]);
         break;
       default:
         break;
@@ -394,92 +419,61 @@ const EditableTable = withDynamicSchemaProps((props) => {
     // console.log('resize_column_end', args);
   }
 
-  // let filterContainer = tableInstance.current.getElement();
   let select;
 
-  let filterListSelectedValues = '';
+  let filterListSelectedValues = [];
   let lastFilterField;
 
   const onIconClick = (args) => {
     const { col, row, name } = args;
     if (name === 'filter') {
-      const field = tableInstance.current.getHeaderField(col, row);
+      const field = tableInstance.current!.getHeaderField(col, row);
+      console.log('icon_click', colsRef.current, field);
+      const column = colsRef.current.find(item => item.field === field);
       if (select && lastFilterField === field) {
         removeFilterElement();
         lastFilterField = null;
       } else if (!select || lastFilterField !== field) {
-        const rect = tableInstance.current.getCellRelativeRect(col, row);
-        // createFilterElement(filterListValues[field], filterListSelectedValues, field, rect);
-        createFilterElement(['item1', 'item2', 'item3'], filterListSelectedValues, field, rect);
+        const rect = tableInstance.current!.getCellRelativeRect(col, row);
+        createFilterElement(column, filterListSelectedValues, rect);
         lastFilterField = field;
       }
     }
   }
 
-  function createFilterElement(values, curValue, field, positonRect) {
-    const tableInstanceElement = tableInstance.current.getElement();
-    // create select tag
-    // select = document.createElement('select');
-    // select.setAttribute('type', 'text');
-    // select.style.position = 'absolute';
-    // select.style.padding = '4px';
-    // select.style.width = '100%';
-    // select.style.boxSizing = 'border-box';
+  function createFilterElement(column, curValue, positonRect) {
+    const { field, enums } = column;
+    const tableInstanceElement = tableInstance.current!.getElement();
     select = document.createElement('div');
-
     const root = ReactDom.createRoot(select);
-
     const style = {
       position: 'absolute',
-      padding: '4px',
-      boxSizing: 'border-box',
+      // padding: '4px',
+      // boxSizing: 'border-box',
       top: positonRect.top + positonRect.height + 'px',
       left: positonRect.left + 'px',
-      height: positonRect.height + 'px',
-      width: positonRect.width + 'px',
+      // height: positonRect.height + 'px',
+      // width: positonRect.width + 'px',
+      width: 200,
+      backgroundColor: '#FFFFFF',
     }
-
-    root.render(
-      <div>
-        <FilterDropdown style={style} />
-      </div>
-    );
-
-    tableInstanceElement.appendChild(select);
-
-    // // create option tags
-    // let opsStr = '';
-    // values.forEach(item => {
-    //   opsStr +=
-    //     item === curValue
-    //       ? `<option value="${item}" selected>${item}</option>`
-    //       : `<option value="${item}" >${item}</option>`;
-    // });
-    // select.innerHTML = opsStr;
-    // tableInstance.current.getElement().appendChild(select);
-    // select.style.top = positonRect.top + positonRect.height + 'px';
-    // select.style.left = positonRect.left + 'px';
-    // select.style.width = positonRect.width + 'px';
-    // select.style.height = positonRect.height + 'px';
-
-    select.addEventListener('change', () => {
-      filterListSelectedValues = select.value;
-      tableInstance.current.updateFilterRules([
+    const onFilter = (selectedKeys: string[]) => {
+      tableInstance.current!.updateFilterRules([
         {
           filterKey: field,
-          filteredValues: select.value
+          filteredValues: selectedKeys
         }
       ]);
       removeFilterElement();
-      //更新列头icon
-      columns.forEach(col => {
-        if (col.field === field) {
-          col.headerIcon = 'filter';
-        }
-      });
-      tableInstance.current.updateColumns(columns);
-    });
-
+    }
+    const Component = enums ? FilterMenu : FilterMenu;
+    root.render(
+      // @ts-ignore
+      <div style={style}>
+        <Component onChange={onFilter} enums={enums} />
+      </div>
+    );
+    tableInstanceElement.appendChild(select);
   }
 
   function removeFilterElement() {
@@ -523,6 +517,8 @@ const EditableTable = withDynamicSchemaProps((props) => {
             // sort: s.sort,
             ...s,
           };
+          console.log('----props--', props);
+
           return <ListColumn {...props} />
         })
       }
